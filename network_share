@@ -1,0 +1,71 @@
+---
+- name: Check Network Share Configurations
+  hosts: all  # Can be removed when using AWX/Tower
+  gather_facts: false
+  tasks:
+    - name: Check if files exist
+      stat:
+        path: "{{ item }}"
+      register: file_status
+      loop:
+        - /etc/auto.direct
+        - /etc/auto.master
+        - /etc/fstab
+
+    - name: Read auto.direct file if exists
+      slurp:
+        path: /etc/auto.direct
+      register: auto_direct_content
+      when: file_status.results[0].stat.exists
+      ignore_errors: true
+
+    - name: Read auto.master file if exists
+      slurp:
+        path: /etc/auto.master
+      register: auto_master_content
+      when: file_status.results[1].stat.exists
+      ignore_errors: true
+
+    - name: Read fstab file if exists
+      slurp:
+        path: /etc/fstab
+      register: fstab_content
+      when: file_status.results[2].stat.exists
+      ignore_errors: true
+
+    - name: Parse and display network shares from auto.direct
+      set_fact:
+        auto_direct_shares: "{{ (auto_direct_content.content | b64decode).split('\n') | select('match', '.*://.*|.*:.*') | list }}"
+      when: file_status.results[0].stat.exists and auto_direct_content is defined
+      ignore_errors: true
+
+    - name: Parse and display network shares from auto.master
+      set_fact:
+        auto_master_shares: "{{ (auto_master_content.content | b64decode).split('\n') | select('match', '.*://.*|.*:.*') | list }}"
+      when: file_status.results[1].stat.exists and auto_master_content is defined
+      ignore_errors: true
+
+    - name: Parse and display network shares from fstab
+      set_fact:
+        fstab_shares: "{{ (fstab_content.content | b64decode).split('\n') | select('match', '.*://.*|.*:.*|.*cifs.*|.*nfs.*') | list }}"
+      when: file_status.results[2].stat.exists and fstab_content is defined
+      ignore_errors: true
+
+    - name: Display found network shares
+      debug:
+        msg: 
+          - "Network shares in auto.direct: {{ auto_direct_shares | default([]) }}"
+          - "Network shares in auto.master: {{ auto_master_shares | default([]) }}"
+          - "Network shares in fstab: {{ fstab_shares | default([]) }}"
+
+    - name: Create summary of all network shares
+      set_fact:
+        all_network_shares: "{{ 
+          (auto_direct_shares | default([])) +
+          (auto_master_shares | default([])) +
+          (fstab_shares | default([]))
+        }}"
+
+    - name: Display final summary
+      debug:
+        msg: "All discovered network shares: {{ all_network_shares | select('string') | list }}"
