@@ -1,8 +1,15 @@
 ---
 - name: Test Artifacts
-  hosts: all  # AWX will use the host you select
+  hosts: all
   gather_facts: false
   tasks:
+    - name: Ensure artifacts directory exists
+      file:
+        path: "/tmp/artifacts"
+        state: directory
+        mode: '0777'
+      delegate_to: localhost
+
     - name: Get hostname
       command: hostname
       register: host_info
@@ -10,11 +17,8 @@
     - name: Create test content
       copy:
         content: |
-          This is a test artifact from host: {{ host_info.stdout }}
-          Created at: {{ ansible_date_time | default(lookup('pipe', 'date')) }}
-        dest: "{{ lookup('env', 'AWX_ARTIFACT_DIR', default='/tmp/artifacts') }}/test_{{ host_info.stdout }}.txt"
+          This is a test artifact
+          Hostname: {{ host_info.stdout }}
+          Created at: {{ lookup('pipe', 'date') }}
+        dest: "/tmp/artifacts/test.txt"
       delegate_to: localhost
-
-    - name: Show file was created
-      debug:
-        msg: "Created artifact file for host {{ host_info.stdout }}"
