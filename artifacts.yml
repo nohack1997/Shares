@@ -7,6 +7,12 @@
       debug:
         msg: "Running on {{ ansible_hostname }}"
 
+    - name: Create artifacts directory
+      file:
+        path: "/tmp/awx_artifacts"
+        state: directory
+        mode: '0755'
+
     - name: Create test content
       copy:
         content: |
@@ -14,11 +20,12 @@
           Hostname: {{ ansible_hostname }}
           OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
           Created at: {{ ansible_date_time.iso8601 }}
-        dest: "/tmp/artifacts/system_info.txt"
+        dest: "/tmp/awx_artifacts/system_info.txt"
+        mode: '0644'
 
     - name: Verify file creation
       stat:
-        path: "/tmp/artifacts/system_info.txt"
+        path: "/tmp/awx_artifacts/system_info.txt"
       register: file_check
 
     - name: Show file status
@@ -26,9 +33,11 @@
         msg: "File created: {{ file_check.stat.exists }}"
 
     - name: Display file contents
-      command: cat /tmp/artifacts/system_info.txt
+      command: cat /tmp/awx_artifacts/system_info.txt
       register: file_contents
+      when: file_check.stat.exists
 
     - name: Show contents
       debug:
         var: file_contents.stdout_lines
+      when: file_contents is defined
