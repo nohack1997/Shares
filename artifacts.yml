@@ -1,17 +1,31 @@
 ---
 - name: Test Artifacts
-  hosts: all
+  hosts: localhost  # Changed to localhost for initial testing
+  connection: local
   gather_facts: false
   tasks:
-    - name: Create test content
-      copy:
-        content: |
-          This is a test artifact
-          Created at: {{ ansible_date_time.iso8601 }}
-          Host: {{ inventory_hostname }}
-        dest: "/tmp/artifacts/test_{{ inventory_hostname }}.txt"
+    - name: Debug inventory
+      debug:
+        msg: "Current inventory settings"
+
+    - name: Create artifacts directory
+      file:
+        path: "/tmp/artifacts"
+        state: directory
+        mode: '0755'
       delegate_to: localhost
 
-    - name: Debug message
+    - name: Create test content
+      copy:
+        content: "This is a test artifact\nCreated at: {{ ansible_date_time.iso8601 | default(ansible_date_time) }}\n"
+        dest: "/tmp/artifacts/test.txt"
+      delegate_to: localhost
+
+    - name: List artifacts directory
+      command: ls -l /tmp/artifacts
+      register: ls_output
+      delegate_to: localhost
+
+    - name: Show directory contents
       debug:
-        msg: "Test file should be created at: /tmp/artifacts/test_{{ inventory_hostname }}.txt"
+        var: ls_output.stdout_lines
