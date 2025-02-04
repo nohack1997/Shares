@@ -3,22 +3,25 @@
   hosts: all
   gather_facts: false
   tasks:
-    - name: Ensure artifacts directory exists
-      file:
-        path: "/tmp/artifacts"
-        state: directory
-        mode: '0777'
+    - name: Debug inventory
+      debug:
+        msg: 
+          - "Inventory host: {{ inventory_hostname }}"
+          - "Current working directory: {{ lookup('pipe', 'pwd') }}"
       delegate_to: localhost
 
-    - name: Get hostname
-      command: hostname
-      register: host_info
+    - name: Show current directory contents
+      command: ls -la
+      register: ls_output
+      delegate_to: localhost
 
-    - name: Create test content
+    - name: Debug directory contents
+      debug:
+        var: ls_output.stdout_lines
+      delegate_to: localhost
+
+    - name: Create simple file
       copy:
-        content: |
-          This is a test artifact
-          Hostname: {{ host_info.stdout }}
-          Created at: {{ lookup('pipe', 'date') }}
-        dest: "/tmp/artifacts/test.txt"
+        content: "Test content"
+        dest: "./test.txt"
       delegate_to: localhost
