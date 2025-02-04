@@ -1,31 +1,20 @@
 ---
 - name: Test Artifacts
-  hosts: localhost  # Changed to localhost for initial testing
-  connection: local
+  hosts: all  # AWX will use the host you select
   gather_facts: false
   tasks:
-    - name: Debug inventory
-      debug:
-        msg: "Current inventory settings"
-
-    - name: Create artifacts directory
-      file:
-        path: "/tmp/artifacts"
-        state: directory
-        mode: '0755'
-      delegate_to: localhost
+    - name: Get hostname
+      command: hostname
+      register: host_info
 
     - name: Create test content
       copy:
-        content: "This is a test artifact\nCreated at: {{ ansible_date_time.iso8601 | default(ansible_date_time) }}\n"
-        dest: "/tmp/artifacts/test.txt"
+        content: |
+          This is a test artifact from host: {{ host_info.stdout }}
+          Created at: {{ ansible_date_time | default(lookup('pipe', 'date')) }}
+        dest: "{{ lookup('env', 'AWX_ARTIFACT_DIR', default='/tmp/artifacts') }}/test_{{ host_info.stdout }}.txt"
       delegate_to: localhost
 
-    - name: List artifacts directory
-      command: ls -l /tmp/artifacts
-      register: ls_output
-      delegate_to: localhost
-
-    - name: Show directory contents
+    - name: Show file was created
       debug:
-        var: ls_output.stdout_lines
+        msg: "Created artifact file for host {{ host_info.stdout }}"
