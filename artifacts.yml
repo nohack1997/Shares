@@ -1,0 +1,17 @@
+---
+- name: Test Artifacts
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Create test content
+      copy:
+        content: |
+          This is a test artifact
+          Created at: {{ ansible_date_time.iso8601 }}
+          Host: {{ inventory_hostname }}
+        dest: "/tmp/artifacts/test_{{ inventory_hostname }}.txt"
+      delegate_to: localhost
+
+    - name: Debug message
+      debug:
+        msg: "Test file should be created at: /tmp/artifacts/test_{{ inventory_hostname }}.txt"
