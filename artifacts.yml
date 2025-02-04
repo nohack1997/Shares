@@ -1,27 +1,34 @@
 ---
 - name: Test Artifacts
   hosts: all
-  gather_facts: false
+  gather_facts: yes
   tasks:
-    - name: Debug inventory
+    - name: Get system information
       debug:
-        msg: 
-          - "Inventory host: {{ inventory_hostname }}"
-          - "Current working directory: {{ lookup('pipe', 'pwd') }}"
-      delegate_to: localhost
+        msg: "Running on {{ ansible_hostname }}"
 
-    - name: Show current directory contents
-      command: ls -la
-      register: ls_output
-      delegate_to: localhost
-
-    - name: Debug directory contents
-      debug:
-        var: ls_output.stdout_lines
-      delegate_to: localhost
-
-    - name: Create simple file
+    - name: Create test content
       copy:
-        content: "Test content"
-        dest: "./test.txt"
-      delegate_to: localhost
+        content: |
+          Host Information:
+          Hostname: {{ ansible_hostname }}
+          OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Created at: {{ ansible_date_time.iso8601 }}
+        dest: "/tmp/artifacts/system_info.txt"
+
+    - name: Verify file creation
+      stat:
+        path: "/tmp/artifacts/system_info.txt"
+      register: file_check
+
+    - name: Show file status
+      debug:
+        msg: "File created: {{ file_check.stat.exists }}"
+
+    - name: Display file contents
+      command: cat /tmp/artifacts/system_info.txt
+      register: file_contents
+
+    - name: Show contents
+      debug:
+        var: file_contents.stdout_lines
